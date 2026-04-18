@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="icon-192.png">
-<title data-id="th-modified">Deník času</title>
+<title>Deník času</title>
 <style>
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; overscroll-behavior-y: none; }
@@ -27,7 +27,7 @@
   input, textarea { font-family: inherit; -webkit-appearance: none; }
   #root { min-height: 100vh; }
 </style>
-<meta property="og:title" content="Deník času" data-id="th-modified" ><meta name="description" content="denik-casu-pwa" data-id="th-modified" ><meta property="og:description" content="denik-casu-pwa" data-id="th-modified" ><meta property="og:image" content="https://tiiny.host/assets/logo-purple-bg.png" data-id="th-modified" ><meta property="og:url" content="https://denik-casu.tiiny.site/" data-id="th-modified" ><meta property="og:type" content="website" data-id="th-modified" ><script defer data-domain="denik-casu.tiiny.site" src="https://analytics.tiiny.site/js/plausible.js"></script><script type="text/javascript" src="https://tiiny.host/ad-script.js"></script></head>
+</head>
 <body>
 <div id="root"></div>
 
@@ -81,6 +81,19 @@ const IconBell = (p) => <Icon {...p} d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-
 const IconBellOff = (p) => <Icon {...p} d="M13.73 21a2 2 0 01-3.46 0M18.63 13A17.89 17.89 0 0118 8M6.26 6.26A5.86 5.86 0 006 8c0 7-3 9-3 9h14M18 8a6 6 0 00-9.33-5M1 1l22 22" />;
 const IconHeart = (p) => <Icon {...p} d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 000-7.78z" />;
 const IconTrend = (p) => <Icon {...p} d="M23 6l-9.5 9.5-5-5L1 18M17 6h6v6" />;
+const IconDownload = (p) => <Icon {...p} d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />;
+const IconTag = (p) => <Icon {...p} d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82zM7 7h.01" />;
+const IconGear = (p) => <Icon {...p} d="M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h0a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v0a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />;
+
+// === Výchozí kategorie ===
+const DEFAULT_CATEGORIES = [
+  { id: 'prace', name: 'Práce', color: '#3b82f6' },
+  { id: 'klient', name: 'Klient', color: '#8b5cf6' },
+  { id: 'osobni', name: 'Osobní', color: '#10b981' },
+  { id: 'domacnost', name: 'Domácnost', color: '#f59e0b' },
+  { id: 'rodina', name: 'Rodina', color: '#ec4899' },
+  { id: 'odpocinek', name: 'Odpočinek', color: '#14b8a6' },
+];
 
 // === Hlavní komponenta ===
 function App() {
@@ -94,7 +107,13 @@ function App() {
   const [duration, setDuration] = useState('');
   const [timeFrom, setTimeFrom] = useState('');
   const [timeTo, setTimeTo] = useState('');
+  const [category, setCategory] = useState('');
+  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [filter, setFilter] = useState('today');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [showCatManager, setShowCatManager] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatColor, setNewCatColor] = useState('#6366f1');
   const [notifSetting, setNotifSetting] = useState('off');
   const [notifPermission, setNotifPermission] = useState(
     typeof Notification !== 'undefined' ? Notification.permission : 'default'
@@ -110,6 +129,11 @@ function App() {
 
     const savedNotif = storage.get('settings:notif');
     if (savedNotif) setNotifSetting(savedNotif);
+
+    const savedCats = storage.get('settings:categories');
+    if (savedCats && Array.isArray(savedCats) && savedCats.length > 0) {
+      setCategories(savedCats);
+    }
   }, []);
 
   // Výpočet délky
@@ -181,6 +205,7 @@ function App() {
     const entry = {
       id: `entry_${Date.now()}`,
       activity: activity.trim(),
+      category: category || null,
       feeling, usefulness,
       duration: finalDur,
       timeFrom: timeFrom || null,
@@ -191,8 +216,63 @@ function App() {
     storage.set(`entry:${entry.id}`, entry);
     setEntries([entry, ...entries]);
     setActivity(''); setFeeling(5); setUsefulness(5);
-    setDuration(''); setTimeFrom(''); setTimeTo('');
+    setDuration(''); setTimeFrom(''); setTimeTo(''); setCategory('');
     setShowForm(false);
+  };
+
+  // === Správa kategorií ===
+  const saveCategories = (cats) => {
+    setCategories(cats);
+    storage.set('settings:categories', cats);
+  };
+  const addCategory = () => {
+    if (!newCatName.trim()) return;
+    const id = `cat_${Date.now()}`;
+    saveCategories([...categories, { id, name: newCatName.trim(), color: newCatColor }]);
+    setNewCatName('');
+    setNewCatColor('#6366f1');
+  };
+  const deleteCategory = (id) => {
+    saveCategories(categories.filter(c => c.id !== id));
+  };
+  const getCatById = (id) => categories.find(c => c.id === id);
+
+  // === Export do CSV ===
+  const exportCSV = () => {
+    const headers = ['Datum', 'Čas', 'Od', 'Do', 'Aktivita', 'Kategorie', 'Délka (min)', 'Pocit (1-10)', 'Užitečnost (1-10)'];
+    const rows = [...entries].sort((a, b) => a.timestamp - b.timestamp).map(e => {
+      const d = new Date(e.timestamp);
+      const dateStr = d.toLocaleDateString('cs-CZ');
+      const timeStr = d.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' });
+      const catName = e.category ? (getCatById(e.category)?.name || '') : '';
+      // Escape pro CSV: pokud obsahuje čárku, uvozovku nebo nový řádek, obal uvozovkami
+      const esc = (v) => {
+        if (v == null) return '';
+        const s = String(v);
+        if (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes(';')) {
+          return '"' + s.replace(/"/g, '""') + '"';
+        }
+        return s;
+      };
+      return [
+        esc(dateStr), esc(timeStr),
+        esc(e.timeFrom || ''), esc(e.timeTo || ''),
+        esc(e.activity), esc(catName),
+        esc(e.duration || ''), esc(e.feeling), esc(e.usefulness)
+      ].join(';');
+    });
+    // BOM pro správné čtení češtiny v Excelu
+    const csv = '\uFEFF' + headers.join(';') + '\n' + rows.join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const today = new Date().toISOString().slice(0, 10);
+    a.download = `denik-casu-${today}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const deleteEntry = (id) => {
@@ -212,12 +292,17 @@ function App() {
 
   const getFiltered = () => {
     const now = Date.now(); const dayMs = 864e5;
+    let list = entries;
     if (filter === 'today') {
       const t = new Date(); t.setHours(0,0,0,0);
-      return entries.filter(e => e.timestamp >= t.getTime());
+      list = list.filter(e => e.timestamp >= t.getTime());
+    } else if (filter === 'week') {
+      list = list.filter(e => e.timestamp >= now - 7 * dayMs);
     }
-    if (filter === 'week') return entries.filter(e => e.timestamp >= now - 7 * dayMs);
-    return entries;
+    if (categoryFilter !== 'all') {
+      list = list.filter(e => e.category === categoryFilter);
+    }
+    return list;
   };
 
   const filtered = getFiltered();
@@ -257,7 +342,13 @@ function App() {
               {new Date().toLocaleDateString('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long' })}
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: '6px', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <IconBtn onClick={() => setShowCatManager(true)} title="Kategorie">
+              <IconTag size={14} />
+            </IconBtn>
+            <IconBtn onClick={exportCSV} title="Export do CSV" disabled={entries.length === 0}>
+              <IconDownload size={14} />
+            </IconBtn>
             <IconBtn active={showSettings} onClick={() => { setShowSettings(!showSettings); setShowStats(false); }}>
               {notifSetting === 'off' ? <IconBellOff size={14} /> : <IconBell size={14} />}
             </IconBtn>
@@ -275,6 +366,30 @@ function App() {
               border: '1px solid', borderColor: filter === f.id ? '#1c1917' : 'rgba(120,113,108,0.3)',
               borderRadius: '999px', padding: '6px 14px', cursor: 'pointer', fontSize: '13px', fontWeight: '500',
             }}>{f.l}</button>
+          ))}
+        </div>
+
+        {/* Filtr kategorií */}
+        <div style={{ display: 'flex', gap: '6px', marginTop: '10px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+          <button onClick={() => setCategoryFilter('all')} style={{
+            background: categoryFilter === 'all' ? '#44403c' : 'transparent',
+            color: categoryFilter === 'all' ? '#fef7ed' : '#57534e',
+            border: '1px solid', borderColor: categoryFilter === 'all' ? '#44403c' : 'rgba(120,113,108,0.25)',
+            borderRadius: '999px', padding: '4px 12px', cursor: 'pointer', fontSize: '12px',
+            whiteSpace: 'nowrap', flexShrink: 0,
+          }}>Všechny kategorie</button>
+          {categories.map(c => (
+            <button key={c.id} onClick={() => setCategoryFilter(c.id)} style={{
+              background: categoryFilter === c.id ? c.color : 'transparent',
+              color: categoryFilter === c.id ? '#fff' : '#57534e',
+              border: '1px solid', borderColor: categoryFilter === c.id ? c.color : 'rgba(120,113,108,0.25)',
+              borderRadius: '999px', padding: '4px 12px', cursor: 'pointer', fontSize: '12px',
+              whiteSpace: 'nowrap', flexShrink: 0,
+              display: 'flex', alignItems: 'center', gap: '5px',
+            }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: categoryFilter === c.id ? '#fff' : c.color, display: 'inline-block' }} />
+              {c.name}
+            </button>
           ))}
         </div>
       </div>
@@ -353,10 +468,24 @@ function App() {
               <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.15em', color: '#a8a29e', marginBottom: '10px', paddingLeft: '4px', fontWeight: '600' }}>
                 {day}
               </div>
-              {dayEntries.map(entry => (
+              {dayEntries.map(entry => {
+                const cat = entry.category ? getCatById(entry.category) : null;
+                return (
                 <div key={entry.id} style={{ background: '#fffbeb', border: '1px solid rgba(120,113,108,0.15)', borderRadius: '16px', padding: '14px 16px', marginBottom: '10px', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
+                      {cat && (
+                        <div style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '4px',
+                          background: cat.color + '20', color: cat.color,
+                          fontSize: '11px', fontWeight: '600',
+                          padding: '2px 8px', borderRadius: '999px',
+                          marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em',
+                        }}>
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: cat.color }} />
+                          {cat.name}
+                        </div>
+                      )}
                       <div style={{ fontSize: '16px', fontWeight: '500', color: '#1c1917', marginBottom: '4px', wordWrap: 'break-word' }}>
                         {entry.activity}
                       </div>
@@ -376,7 +505,8 @@ function App() {
                     <RatingPill icon={<IconTrend size={12} />} label="Užitek" value={entry.usefulness} bg={getColor(entry.usefulness, 'usefulness')} dark={entry.usefulness > 5} />
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           ))
         )}
@@ -392,18 +522,32 @@ function App() {
         <IconPlus size={28} />
       </button>
 
-      {showForm && <FormModal {...{ activity, setActivity, feeling, setFeeling, usefulness, setUsefulness, duration, setDuration, timeFrom, setTimeFrom, timeTo, setTimeTo, saveEntry, close: () => setShowForm(false), getColor }} />}
+      {showForm && <FormModal {...{ activity, setActivity, feeling, setFeeling, usefulness, setUsefulness, duration, setDuration, timeFrom, setTimeFrom, timeTo, setTimeTo, category, setCategory, categories, saveEntry, close: () => setShowForm(false), getColor }} />}
+
+      {showCatManager && (
+        <CategoryManager
+          categories={categories}
+          deleteCategory={deleteCategory}
+          newCatName={newCatName} setNewCatName={setNewCatName}
+          newCatColor={newCatColor} setNewCatColor={setNewCatColor}
+          addCategory={addCategory}
+          close={() => setShowCatManager(false)}
+        />
+      )}
     </div>
   );
 }
 
 // === Pomocné komponenty ===
-const IconBtn = ({ active, onClick, children }) => (
-  <button onClick={onClick} style={{
+const IconBtn = ({ active, onClick, children, title, disabled }) => (
+  <button onClick={onClick} disabled={disabled} title={title} style={{
     background: active ? '#1c1917' : 'transparent',
-    color: active ? '#fef7ed' : '#1c1917',
-    border: '1px solid #1c1917', borderRadius: '999px', padding: '8px 12px',
-    cursor: 'pointer', display: 'flex', alignItems: 'center',
+    color: active ? '#fef7ed' : (disabled ? '#d6d3d1' : '#1c1917'),
+    border: '1px solid', borderColor: disabled ? '#d6d3d1' : '#1c1917',
+    borderRadius: '999px', padding: '8px 12px',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    display: 'flex', alignItems: 'center',
+    opacity: disabled ? 0.5 : 1,
   }}>{children}</button>
 );
 
@@ -425,7 +569,7 @@ const RatingPill = ({ icon, label, value, bg, dark }) => (
 );
 
 // === Formulář ===
-function FormModal({ activity, setActivity, feeling, setFeeling, usefulness, setUsefulness, duration, setDuration, timeFrom, setTimeFrom, timeTo, setTimeTo, saveEntry, close, getColor }) {
+function FormModal({ activity, setActivity, feeling, setFeeling, usefulness, setUsefulness, duration, setDuration, timeFrom, setTimeFrom, timeTo, setTimeTo, category, setCategory, categories, saveEntry, close, getColor }) {
   return (
     <div onClick={close} style={{
       position: 'fixed', inset: 0, background: 'rgba(28,25,23,0.5)',
@@ -447,6 +591,33 @@ function FormModal({ activity, setActivity, feeling, setFeeling, usefulness, set
           <textarea value={activity} onChange={e => setActivity(e.target.value)} placeholder="Např. Práce na strategii..." autoFocus rows={2}
             style={inputStyle(false, true)} />
         </Field>
+
+        {categories.length > 0 && (
+          <Field label="Kategorie" hint="nepovinné">
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              <button onClick={() => setCategory('')} style={{
+                padding: '6px 12px', fontSize: '13px',
+                background: !category ? '#44403c' : 'transparent',
+                color: !category ? '#fef7ed' : '#57534e',
+                border: '1px solid', borderColor: !category ? '#44403c' : 'rgba(120,113,108,0.25)',
+                borderRadius: '999px', cursor: 'pointer',
+              }}>žádná</button>
+              {categories.map(c => (
+                <button key={c.id} onClick={() => setCategory(c.id)} style={{
+                  padding: '6px 12px', fontSize: '13px',
+                  background: category === c.id ? c.color : 'transparent',
+                  color: category === c.id ? '#fff' : '#57534e',
+                  border: '1px solid', borderColor: category === c.id ? c.color : 'rgba(120,113,108,0.25)',
+                  borderRadius: '999px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '5px',
+                }}>
+                  <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: category === c.id ? '#fff' : c.color, display: 'inline-block' }} />
+                  {c.name}
+                </button>
+              ))}
+            </div>
+          </Field>
+        )}
 
         <Field label="Od — Do" hint="nepovinné">
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -524,6 +695,87 @@ const RatingField = ({ label, icon, value, setValue, getColor, darkAbove5 }) => 
     </div>
   </div>
 );
+
+// === Správa kategorií ===
+const PRESET_COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#ef4444', '#f59e0b', '#eab308', '#10b981', '#14b8a6', '#06b6d4', '#6366f1', '#a855f7', '#64748b'];
+
+function CategoryManager({ categories, deleteCategory, newCatName, setNewCatName, newCatColor, setNewCatColor, addCategory, close }) {
+  return (
+    <div onClick={close} style={{
+      position: 'fixed', inset: 0, background: 'rgba(28,25,23,0.5)',
+      display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100, backdropFilter: 'blur(4px)',
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: '#fef7ed', borderRadius: '24px 24px 0 0',
+        padding: '24px 20px calc(32px + env(safe-area-inset-bottom))',
+        width: '100%', maxWidth: '500px', maxHeight: '85vh', overflowY: 'auto',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h2 style={{ margin: 0, fontFamily: 'Georgia, serif', fontSize: '24px', fontWeight: '400' }}>Kategorie</h2>
+          <button onClick={close} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#78716c', padding: '4px' }}>
+            <IconX size={24} />
+          </button>
+        </div>
+
+        {/* Seznam kategorií */}
+        <div style={{ marginBottom: '24px' }}>
+          {categories.length === 0 ? (
+            <p style={{ color: '#a8a29e', fontStyle: 'italic', fontSize: '14px', textAlign: 'center' }}>Zatím žádné kategorie</p>
+          ) : categories.map(c => (
+            <div key={c.id} style={{
+              display: 'flex', alignItems: 'center', gap: '12px',
+              padding: '10px 14px', background: '#fffbeb',
+              border: '1px solid rgba(120,113,108,0.15)', borderRadius: '12px',
+              marginBottom: '8px',
+            }}>
+              <span style={{ width: '14px', height: '14px', borderRadius: '50%', background: c.color, flexShrink: 0 }} />
+              <span style={{ flex: 1, fontSize: '15px', color: '#1c1917' }}>{c.name}</span>
+              <button onClick={() => { if(confirm(`Smazat kategorii "${c.name}"?`)) deleteCategory(c.id); }} style={{
+                background: 'transparent', border: 'none', cursor: 'pointer', color: '#d6d3d1', padding: '4px',
+              }}>
+                <IconTrash size={16} />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Přidat novou */}
+        <div style={{ padding: '16px', background: '#fffbeb', borderRadius: '14px', border: '1px solid rgba(120,113,108,0.15)' }}>
+          <div style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#78716c', marginBottom: '10px', fontWeight: '600' }}>
+            Přidat kategorii
+          </div>
+          <input
+            type="text"
+            value={newCatName}
+            onChange={e => setNewCatName(e.target.value)}
+            placeholder="Název kategorie"
+            style={{ ...inputStyle(false), marginBottom: '12px' }}
+          />
+          <div style={{ fontSize: '11px', color: '#78716c', marginBottom: '8px', fontWeight: '600' }}>BARVA</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
+            {PRESET_COLORS.map(color => (
+              <button key={color} onClick={() => setNewCatColor(color)} style={{
+                width: '32px', height: '32px', borderRadius: '50%',
+                background: color, cursor: 'pointer',
+                border: newCatColor === color ? '3px solid #1c1917' : '3px solid transparent',
+                padding: 0,
+              }} />
+            ))}
+          </div>
+          <button onClick={addCategory} disabled={!newCatName.trim()} style={{
+            width: '100%', padding: '12px',
+            background: newCatName.trim() ? '#1c1917' : '#d6d3d1', color: '#fef7ed',
+            border: 'none', borderRadius: '12px', fontSize: '14px', fontWeight: '600',
+            cursor: newCatName.trim() ? 'pointer' : 'not-allowed',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+          }}>
+            <IconPlus size={16} /> Přidat
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // === Spuštění ===
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
