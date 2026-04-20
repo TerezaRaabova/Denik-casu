@@ -1,5 +1,5 @@
 // Service Worker pro Deník času
-const CACHE_NAME = 'denik-casu-v3';
+const CACHE_NAME = 'denik-casu-v4';
 const urlsToCache = [
   './',
   './index.html',

@@ -308,17 +308,19 @@ function App() {
 
   // === Export do CSV ===
   const exportCSV = () => {
+    if (entries.length === 0) return;
+
     const headers = ['Datum', 'Čas', 'Od', 'Do', 'Aktivita', 'Kategorie', 'Délka (min)', 'Pocit (1-10)', 'Užitečnost (1-10)'];
     const rows = [...entries].sort((a, b) => a.timestamp - b.timestamp).map(e => {
       const d = new Date(e.timestamp);
       const dateStr = d.toLocaleDateString('cs-CZ');
       const timeStr = d.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' });
       const catName = e.category ? (getCatById(e.category)?.name || '') : '';
-      // Escape pro CSV: pokud obsahuje čárku, uvozovku nebo nový řádek, obal uvozovkami
+      // Escape pro CSV: pokud obsahuje oddělovač, uvozovku nebo nový řádek, obal uvozovkami
       const esc = (v) => {
         if (v == null) return '';
         const s = String(v);
-        if (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes(';')) {
+        if (s.includes(';') || s.includes('"') || s.includes('\n') || s.includes('\r')) {
           return '"' + s.replace(/"/g, '""') + '"';
         }
         return s;
@@ -327,12 +329,21 @@ function App() {
         esc(dateStr), esc(timeStr),
         esc(e.timeFrom || ''), esc(e.timeTo || ''),
         esc(e.activity), esc(catName),
-        esc(e.duration || ''), esc(e.feeling), esc(e.usefulness)
+        esc(e.duration != null ? e.duration : ''),
+        esc(e.feeling), esc(e.usefulness)
       ].join(';');
     });
-    // BOM pro správné čtení češtiny v Excelu
-    const csv = '\uFEFF' + headers.join(';') + '\n' + rows.join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+
+    // Pro maximální kompatibilitu s Excelem:
+    // 1. UTF-8 BOM na začátku (Excel díky tomu pozná kódování)
+    // 2. Středník jako oddělovač (české Excely)
+    // 3. CRLF konce řádků (Windows standard, Excel je preferuje)
+    // 4. "sep=;" hint pro Excel (povinně na první řádek)
+    const BOM = '\uFEFF';
+    const sepHint = 'sep=;\r\n';
+    const csvContent = BOM + sepHint + headers.join(';') + '\r\n' + rows.join('\r\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -341,7 +352,7 @@ function App() {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 100);
   };
 
   const deleteEntry = (id) => {
